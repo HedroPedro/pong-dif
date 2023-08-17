@@ -1,21 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <SDL2/SDL.h>
-#include "./constant.h"
 #include "./pong.h"
 
 int game_is_running = FALSE;
 int last_frame_time = 0;
-float delta_time = 0;
+short gameState = PAUSED;
 
-SDL_Window *window = NULL;
-SDL_Renderer *renderer =  NULL;
-
-int xdir = -1, yBallDir = 1;
-
-SDL_Rect ball;
-bar player;
-bar enemy;
+int xdir = 0, yBallDir = 0;
 
 int main(int argc, char *argv[]){
     game_is_running = initialize_window();
@@ -23,7 +14,7 @@ int main(int argc, char *argv[]){
     setup();
 
     while(game_is_running){
-        process_input(&delta_time);
+        process_input();
         render();
         update();
     }   
@@ -52,6 +43,7 @@ int initialize_window(void){
 }
 
 void setup(void){
+    xdir = 1, yBallDir = -1;
     ball.x = WIDTH/2, ball.y = HEIGHT/2;
     ball.w = 20, ball.h = 20;
     player.rect.x = 0, player.rect.y = HEIGHT/2;
@@ -78,37 +70,41 @@ void update(void){
         SDL_Delay(time_to_wait);
 
     
-    delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
-    int spdDelta = 120 * delta_time;
+    float delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
 
 
     last_frame_time = SDL_GetTicks64();
-    if(isOutOfYBounds(&ball))
-        yBallDir *= -1;
-    if(isOutOfXBounds(&ball))
-        setup();
-    if(hasColidedWithPlayer1() || hasColidedWithPlayer2())
-        xdir *= -1;
+    if(gameState != PAUSED){
+        int spdDelta = 120 * delta_time;
+        SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
+        SDL_Rect p2YNextPos = {enemy.rect.x, (enemy.rect.y+(spdDelta * yBallDir)), 20, 80};
+        SDL_Rect ballNextPos = {ball.x + (spdDelta) * xdir, (ball.y+(spdDelta * yBallDir)), 20, 20};
 
-    SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
-    SDL_Rect p2YNextPos = {enemy.rect.x, (enemy.rect.y+(spdDelta * yBallDir)), 20, 80};
-
-    if(isOutOfYBounds(&p1YNextPos)){
-        player.yDir = 0;
+        if(isOutOfYBounds(&p1YNextPos)){
+            player.yDir = 0;
     }
 
-    if(!isOutOfYBounds(&p2YNextPos))
-        enemy.rect.y += (spdDelta) * yBallDir;
-    else
-        enemy.rect.y = enemy.rect.y;
+        if(isOutOfYBounds(&ballNextPos))
+            yBallDir *=-1; 
+
+        if((ballNextPos.x < player.rect.x+player.rect.w && hasColidedWithBar(&ballNextPos, &player.rect)) 
+        || (ballNextPos.x + enemy.rect.w > enemy.rect.x && hasColidedWithBar(&ballNextPos, &enemy.rect)))
+            xdir *= -1;
+        if(isOutOfXBounds(&ball))
+            setup();
+
+        if(!isOutOfYBounds(&p2YNextPos))
+            enemy.rect.y += (spdDelta) * yBallDir;
+        else
+            enemy.rect.y = enemy.rect.y;
     
-    ball.x += (spdDelta) * xdir;
-    ball.y += (spdDelta) * yBallDir;
-    player.rect.y += spdDelta * player.yDir;
-     
+        ball.x += (spdDelta) * xdir;
+        ball.y += (spdDelta) * yBallDir;
+        player.rect.y += spdDelta * player.yDir;
+    }     
 }
 
-void process_input(float *delta_time){
+void process_input(void){
     SDL_Event event;
     SDL_PollEvent(&event);
 
@@ -121,14 +117,13 @@ void process_input(float *delta_time){
             game_is_running = FALSE;
             break;
         }
+        if(gameState == PAUSED)
+            gameState = RUNNING;
         if(event.key.keysym.sym == SDLK_w){
             player.yDir = -1;
             break;    
         }else if(event.key.keysym.sym == SDLK_s){
             player.yDir = 1;
-            break;
-        }else{
-            player.yDir = 0;
             break;
         }
         if(event.key.keysym.sym == SDLK_r){
@@ -160,11 +155,7 @@ int isOutOfYBounds(SDL_Rect *rect){
     return FALSE;
 }
 
-//Colisões especificas para cada jogador
-int hasColidedWithPlayer2(void){
-    return (ball.x+enemy.rect.w > enemy.rect.x) && (ball.y >= enemy.rect.y-ball.h && ball.y <= (enemy.rect.y+enemy.rect.h)) ? TRUE : FALSE;
-}
-
-int hasColidedWithPlayer1(void){
-    return (ball.x < player.rect.x+player.rect.w) && (ball.y >= player.rect.y-ball.h && ball.y <= (player.rect.y+player.rect.h)) ? TRUE : FALSE;
+//Checa se o y da bolinha está entre a akltura da barra
+int hasColidedWithBar(SDL_Rect *ball, SDL_Rect *bar){
+    return YCOLISSION(ball, bar) ? TRUE : FALSE;
 }
