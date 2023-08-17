@@ -11,30 +11,11 @@ float delta_time = 0;
 SDL_Window *window = NULL;
 SDL_Renderer *renderer =  NULL;
 
-int xdir = -1, ydir = 1;
+int xdir = -1, yBallDir = 1;
 
 SDL_Rect ball;
 bar player;
 bar enemy;
-
-int initialize_window(void);
-
-void render(void);
-
-void setup(void);
-
-void update(void);
-
-int isOutOfXBounds(SDL_Rect *rect);
-int isOutOfYBounds(SDL_Rect *rect);
-
-void process_input(float *delta_time);
-
-void destroy_window(void);
-
-int hasColidedWithPlayer2(void);
-
-int hasColidedWithPlayer1(void);
 
 int main(int argc, char *argv[]){
     game_is_running = initialize_window();
@@ -77,8 +58,7 @@ void setup(void){
     player.rect.w = 20, player.rect.h = 80;
     enemy.rect.x = WIDTH-20, enemy.rect.y = HEIGHT/2;
     enemy.rect.w = 20, enemy.rect.h = 80;
-    player.speed = 255;
-    enemy.speed = 255;
+    player.yDir = 0;
 }
 
 void render(void){
@@ -99,28 +79,33 @@ void update(void){
 
     
     delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
-    
+    int spdDelta = 120 * delta_time;
+
+
     last_frame_time = SDL_GetTicks64();
     if(isOutOfYBounds(&ball))
-        ydir *= -1;
+        yBallDir *= -1;
+    if(isOutOfXBounds(&ball))
+        setup();
     if(hasColidedWithPlayer1() || hasColidedWithPlayer2())
         xdir *= -1;
+
+    SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
+    SDL_Rect p2YNextPos = {enemy.rect.x, (enemy.rect.y+(spdDelta * yBallDir)), 20, 80};
+
+    if(isOutOfYBounds(&p1YNextPos)){
+        player.yDir = 0;
+    }
+
+    if(!isOutOfYBounds(&p2YNextPos))
+        enemy.rect.y += (spdDelta) * yBallDir;
+    else
+        enemy.rect.y = enemy.rect.y;
     
-    int spdDelta = 120 * delta_time;
     ball.x += (spdDelta) * xdir;
-    ball.y += (spdDelta) * ydir;
-
-    if(isOutOfYBounds(&player.rect))
-        player.speed = 0;
-    else
-        player.speed = 255;
-
-    if(!isOutOfYBounds(&enemy.rect) && !isOutOfYBounds(&ball))
-        enemy.rect.y += (spdDelta) * ydir;
-    else if(isOutOfYBounds(&ball))
-        enemy.rect.y += (spdDelta) * -1 * ydir;
-    else
-        enemy.rect.y = enemy.rect.y;     
+    ball.y += (spdDelta) * yBallDir;
+    player.rect.y += spdDelta * player.yDir;
+     
 }
 
 void process_input(float *delta_time){
@@ -137,11 +122,13 @@ void process_input(float *delta_time){
             break;
         }
         if(event.key.keysym.sym == SDLK_w){
-            player.rect.y -= player.speed * (*delta_time);
+            player.yDir = -1;
             break;    
-        }
-        if(event.key.keysym.sym == SDLK_s){
-            player.rect.y += player.speed * (*delta_time);
+        }else if(event.key.keysym.sym == SDLK_s){
+            player.yDir = 1;
+            break;
+        }else{
+            player.yDir = 0;
             break;
         }
         if(event.key.keysym.sym == SDLK_r){
@@ -167,7 +154,7 @@ int isOutOfXBounds(SDL_Rect *rect){
 }
 
 int isOutOfYBounds(SDL_Rect *rect){
-    if((rect->y+rect->h) > HEIGHT || rect->y < 0){
+    if((rect->y+rect->h) > HEIGHT-1 || rect->y < 0){
         return TRUE;
     }
     return FALSE;
