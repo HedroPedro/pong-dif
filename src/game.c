@@ -4,7 +4,7 @@
 
 int game_is_running = FALSE;
 int last_frame_time = 0;
-short gameState = PAUSED;
+short gameState = 0;
 
 int xdir = 0, yBallDir = 0;
 
@@ -27,6 +27,12 @@ int initialize_window(void){
         fprintf(stderr, "Erro ao abrir\n");
         return FALSE;
     }
+
+    if(TTF_Init() != 0){
+        fprintf(stderr, "Erro ao inicializar as fontes\n");
+        return FALSE;
+    }
+
     window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_BORDERLESS);
     if(!window){
         fprintf(stderr, "Erro ao criar uma janela SDL\n");
@@ -39,10 +45,16 @@ int initialize_window(void){
         return FALSE;
     }
 
+    font = TTF_OpenFont("./res/arial.ttf", 12);
+    if(font == NULL){
+        fprintf(stderr, "Erro ao carregar a fonte\n");
+        return FALSE;
+    }
     return TRUE;
 }
 
 void setup(void){
+    gameState = PAUSED;
     xdir = 1, yBallDir = -1;
     ball.x = WIDTH/2, ball.y = HEIGHT/2;
     ball.w = 20, ball.h = 20;
@@ -54,6 +66,10 @@ void setup(void){
 }
 
 void render(void){
+    surface = TTF_RenderText_Solid(font, "Cavalo", textColor);
+    textTexture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Rect cavalo = {0, 0, 40, 80};
+    SDL_RenderCopy(renderer, textTexture, NULL, &cavalo);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -136,8 +152,12 @@ void process_input(void){
 }
 
 void destroy_window(void){
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(textTexture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    TTF_CloseFont(font);
+    TTF_Quit();
     SDL_Quit();
 }
 
@@ -155,7 +175,7 @@ int isOutOfYBounds(SDL_Rect *rect){
     return FALSE;
 }
 
-//Checa se o y da bolinha está entre a akltura da barra
+//Checa se o y da bolinha está entre a altura da barra
 int hasColidedWithBar(SDL_Rect *ball, SDL_Rect *bar){
     return YCOLISSION(ball, bar) ? TRUE : FALSE;
 }

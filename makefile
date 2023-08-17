@@ -1,5 +1,5 @@
 build:
-	gcc -Wall -Wextra -std=c99 -L ./src -L ./src/lib -I ./src -I ./src/include -o ./game ./src/game.c -lmingw32 -lSDL2main -lSDL2
+	gcc -Wall -Wextra -std=c17 -L ./src/lib -I ./src/include ./src/game.c -lmingw32 -lSDL2main -lSDL2 -lSDL2_TTF -o ./game 
 
 run:
 	./game
