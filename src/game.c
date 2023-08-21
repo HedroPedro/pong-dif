@@ -3,8 +3,7 @@
 #include "./pong.h"
 
 int game_is_running = FALSE;
-int last_frame_time = 0;
-short gameState = 0;
+short gameState = P2;
 
 int xdir = 0, yBallDir = 0;
 
@@ -45,118 +44,109 @@ int initialize_window(void){
         return FALSE;
     }
 
-    font = TTF_OpenFont("./res/arial.ttf", 12);
+    font = TTF_OpenFont("src/res/comic.ttf", 36);
     if(font == NULL){
-        fprintf(stderr, "Erro ao carregar a fonte\n");
+        fprintf(stderr, "Erro ao carregar fonte");
         return FALSE;
     }
     return TRUE;
 }
 
 void setup(void){
-    gameState = PAUSED;
-    xdir = 1, yBallDir = -1;
+    xdir = 0, yBallDir = 0;
     ball.x = WIDTH/2, ball.y = HEIGHT/2;
     ball.w = 20, ball.h = 20;
     player.rect.x = 0, player.rect.y = HEIGHT/2;
     player.rect.w = 20, player.rect.h = 80;
-    enemy.rect.x = WIDTH-20, enemy.rect.y = HEIGHT/2;
-    enemy.rect.w = 20, enemy.rect.h = 80;
-    player.yDir = 0;
+    player2.rect.x = WIDTH-20, player2.rect.y = HEIGHT/2;
+    player2.rect.w = 20, player2.rect.h = 80;
+    player.yDir = 0, player2.yDir = 0;;
 }
 
 void render(void){
-    surface = TTF_RenderText_Solid(font, "Cavalo", textColor);
-    textTexture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_Rect cavalo = {0, 0, 40, 80};
-    SDL_RenderCopy(renderer, textTexture, NULL, &cavalo);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderFillRect(renderer, &ball);
-    SDL_RenderFillRect(renderer, &player.rect);
-    SDL_RenderFillRect(renderer, &enemy.rect);
+    if(gameState != MENU){
+        SDL_RenderFillRect(renderer, &ball);
+        SDL_RenderFillRect(renderer, &player.rect);
+        SDL_RenderFillRect(renderer, &player2.rect);
+    }else{
+        surface = TTF_RenderText_Solid(font, "Ponq-Diff", textColor);
+        textTexture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_Rect currentPos = {100, 100, 150, 100};
+        SDL_RenderCopy(renderer, textTexture, NULL, &currentPos);
+        surface = TTF_RenderText_Solid(font, "Iniciar", textColor);
+        textTexture = SDL_CreateTextureFromSurface(renderer, surface);
+        currentPos.y = HEIGHT/2;
+        SDL_RenderCopy(renderer, textTexture, NULL, &currentPos);
+    }
     SDL_RenderPresent(renderer);
 }
 
 void update(void){
+    int last_frame_time = SDL_GetTicks64();
     int time_to_wait = FRAME_TARGET_TIME - (SDL_GetTicks64() - last_frame_time);
 
     if(time_to_wait > 0 && time_to_wait <= FRAME_TARGET_TIME)
         SDL_Delay(time_to_wait);
 
-    
     float delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
 
-
-    last_frame_time = SDL_GetTicks64();
     if(gameState != PAUSED){
-        int spdDelta = 120 * delta_time;
+        int spdDelta = 240 * delta_time;
         SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
-        SDL_Rect p2YNextPos = {enemy.rect.x, (enemy.rect.y+(spdDelta * yBallDir)), 20, 80};
+        SDL_Rect p2YNextPos = {player2.rect.x, (player2.rect.y+(spdDelta * yBallDir)), 20, 80};
         SDL_Rect ballNextPos = {ball.x + (spdDelta) * xdir, (ball.y+(spdDelta * yBallDir)), 20, 20};
 
-        if(isOutOfYBounds(&p1YNextPos)){
+        if(isOutOfYBounds(&p1YNextPos))
             player.yDir = 0;
-    }
+
+        if(isOutOfYBounds(&p2YNextPos))
+            player.yDir = 0;
 
         if(isOutOfYBounds(&ballNextPos))
             yBallDir *=-1; 
 
         if((ballNextPos.x < player.rect.x+player.rect.w && hasColidedWithBar(&ballNextPos, &player.rect)) 
-        || (ballNextPos.x + enemy.rect.w > enemy.rect.x && hasColidedWithBar(&ballNextPos, &enemy.rect)))
+        || (ballNextPos.x + player2.rect.w > player2.rect.x && hasColidedWithBar(&ballNextPos, &player2.rect)))
             xdir *= -1;
         if(isOutOfXBounds(&ball))
             setup();
-
-        if(!isOutOfYBounds(&p2YNextPos))
-            enemy.rect.y += (spdDelta) * yBallDir;
-        else
-            enemy.rect.y = enemy.rect.y;
-    
+            
         ball.x += (spdDelta) * xdir;
         ball.y += (spdDelta) * yBallDir;
         player.rect.y += spdDelta * player.yDir;
-    }     
+        player2.rect.y += spdDelta * player2.yDir;     
+    }
 }
 
 void process_input(void){
     SDL_Event event;
     SDL_PollEvent(&event);
 
-    switch (event.type){
-    case SDL_QUIT:
+    if(event.type == SDL_QUIT || event.key.keysym.sym == SDLK_ESCAPE){
         game_is_running = FALSE;
-        break;
-    case SDL_KEYDOWN:
-        if(event.key.keysym.sym == SDLK_ESCAPE){
-            game_is_running = FALSE;
-            break;
-        }
-        if(gameState == PAUSED)
-            gameState = RUNNING;
-        if(event.key.keysym.sym == SDLK_w){
-            player.yDir = -1;
-            break;    
-        }else if(event.key.keysym.sym == SDLK_s){
-            player.yDir = 1;
-            break;
-        }
-        if(event.key.keysym.sym == SDLK_r){
-            setup();
-        }
-        break;
-    default:
-        break;
+        return;
     }
+
+    if(event.key.keysym.sym == SDLK_r)
+        setup();
+
+    if(gameState == P1)
+        singleInput(&event);
+    if(gameState == P2)
+        coopInput();
+
 }
 
+
 void destroy_window(void){
-    SDL_FreeSurface(surface);
     SDL_DestroyTexture(textTexture);
+    SDL_FreeSurface(surface);
+    TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    TTF_CloseFont(font);
     TTF_Quit();
     SDL_Quit();
 }
@@ -175,7 +165,29 @@ int isOutOfYBounds(SDL_Rect *rect){
     return FALSE;
 }
 
-//Checa se o y da bolinha está entre a altura da barra
-int hasColidedWithBar(SDL_Rect *ball, SDL_Rect *bar){
-    return YCOLISSION(ball, bar) ? TRUE : FALSE;
+//Checa se o y da bolinha está entre a altura da barra desejada
+int hasColidedWithBar(SDL_Rect *obj, SDL_Rect *bar){
+    return YCOLISSION(obj, bar) ? TRUE : FALSE;
+}
+
+void singleInput(SDL_Event *event){
+    if(event->key.keysym.sym == SDLK_w){
+        player.yDir = -1;               
+        }
+    if(event->key.keysym.sym == SDLK_s){
+        player.yDir = 1;               
+        }
+}
+
+void coopInput(void){
+    Uint8 *inputIndex = SDL_GetKeyboardState(NULL);
+    if(inputIndex[SDL_SCANCODE_W])
+        player.yDir = -1;
+    if(inputIndex[SDL_SCANCODE_S])
+        player.yDir = 1;
+
+    if(inputIndex[SDL_SCANCODE_UP])
+        player2.yDir = -1;
+    if(inputIndex[SDL_SCANCODE_DOWN])
+        player2.yDir = 1;
 }

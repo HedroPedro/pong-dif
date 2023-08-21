@@ -4,7 +4,7 @@
 
 #define YCOLISSION(A, B) (A->y >= B->y-A->h && A->y <= (B->y+B->h))
 
-typedef enum{MENU=1, RUNNING, PAUSED} GAME_STATE;
+typedef enum{MENU=1, PAUSED, P1, P2} GAME_STATE;
 
 typedef struct bar{
     SDL_Rect rect;
@@ -14,13 +14,14 @@ typedef struct bar{
 SDL_Window *window = NULL;
 SDL_Renderer *renderer =  NULL;
 SDL_Surface *surface = NULL;
+SDL_Surface *selector = NULL;
 TTF_Font *font = NULL;
 SDL_Texture *textTexture = NULL;
 
 SDL_Rect ball;
-SDL_Color textColor = {0, 0, 0, 255};
+SDL_Color textColor = {0, 0, 0, 0};
 bar player;
-bar enemy;
+bar player2;
 
 int initialize_window(void);
 
@@ -38,3 +39,7 @@ void process_input(void);
 void destroy_window(void);
 
 int hasColidedWithBar(SDL_Rect *ball, SDL_Rect *bar);
+
+void singleInput(SDL_Event *event);
+
+void coopInput(void);
