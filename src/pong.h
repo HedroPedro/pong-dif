@@ -43,3 +43,5 @@ int hasColidedWithBar(SDL_Rect *ball, SDL_Rect *bar);
 void singleInput(SDL_Event *event);
 
 void coopInput(void);
+
+void pausedInput(SDL_Event *event);

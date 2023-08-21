@@ -3,7 +3,7 @@
 #include "./pong.h"
 
 int game_is_running = FALSE;
-short gameState = P2;
+short gameState = PAUSED, desiredGameState = P2;
 
 int xdir = 0, yBallDir = 0;
 
@@ -53,6 +53,7 @@ int initialize_window(void){
 }
 
 void setup(void){
+    gameState = PAUSED;
     xdir = 0, yBallDir = 0;
     ball.x = WIDTH/2, ball.y = HEIGHT/2;
     ball.w = 20, ball.h = 20;
@@ -60,7 +61,7 @@ void setup(void){
     player.rect.w = 20, player.rect.h = 80;
     player2.rect.x = WIDTH-20, player2.rect.y = HEIGHT/2;
     player2.rect.w = 20, player2.rect.h = 80;
-    player.yDir = 0, player2.yDir = 0;;
+    player.yDir = 0, player2.yDir = 0;
 }
 
 void render(void){
@@ -103,7 +104,7 @@ void update(void){
             player.yDir = 0;
 
         if(isOutOfYBounds(&p2YNextPos))
-            player.yDir = 0;
+            player2.yDir = 0;
 
         if(isOutOfYBounds(&ballNextPos))
             yBallDir *=-1; 
@@ -133,11 +134,13 @@ void process_input(void){
     if(event.key.keysym.sym == SDLK_r)
         setup();
 
+    if(gameState == PAUSED)
+        pausedInput(&event);
+
     if(gameState == P1)
         singleInput(&event);
     if(gameState == P2)
         coopInput();
-
 }
 
 
@@ -168,6 +171,14 @@ int isOutOfYBounds(SDL_Rect *rect){
 //Checa se o y da bolinha está entre a altura da barra desejada
 int hasColidedWithBar(SDL_Rect *obj, SDL_Rect *bar){
     return YCOLISSION(obj, bar) ? TRUE : FALSE;
+}
+
+void pausedInput(SDL_Event *event){
+    if(event->type == SDL_KEYDOWN){
+        yBallDir = -1;
+        xdir = 1;
+        gameState = P2;
+    }
 }
 
 void singleInput(SDL_Event *event){
