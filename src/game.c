@@ -3,9 +3,10 @@
 #include "./pong.h"
 
 int game_is_running = FALSE;
-short gameState = PAUSED, desiredGameState = P2;
+short gameState, desiredGameState;
 
-int xdir = 0, yBallDir = 0;
+int xBallDir = 0, yBallDir = 0, nextXdir, nextYdir;
+float speedModifier = 1;
 
 int main(int argc, char *argv[]){
     game_is_running = initialize_window();
@@ -32,7 +33,7 @@ int initialize_window(void){
         return FALSE;
     }
 
-    window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_BORDERLESS);
+    window = SDL_CreateWindow("Ponq-diff", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_BORDERLESS);
     if(!window){
         fprintf(stderr, "Erro ao criar uma janela SDL\n");
         return FALSE;
@@ -52,9 +53,9 @@ int initialize_window(void){
     return TRUE;
 }
 
-void setup(void){
-    gameState = PAUSED;
-    xdir = 0, yBallDir = 0;
+void initialize(){}
+
+void initBallAndBars(void){
     ball.x = WIDTH/2, ball.y = HEIGHT/2;
     ball.w = 20, ball.h = 20;
     player.rect.x = 0, player.rect.y = HEIGHT/2;
@@ -62,6 +63,21 @@ void setup(void){
     player2.rect.x = WIDTH-20, player2.rect.y = HEIGHT/2;
     player2.rect.w = 20, player2.rect.h = 80;
     player.yDir = 0, player2.yDir = 0;
+    speedModifier = 1;
+}
+
+void setup(void){
+    gameState = MENU;
+    initBallAndBars();
+    xBallDir = 0, yBallDir = 0;
+    p1Score = 0, p2Score = 0;
+    if(rand() & 1){
+        nextXdir = 1;
+        nextYdir = -1;
+    }else{
+        nextXdir = -1;
+        nextYdir = 1;
+    }
 }
 
 void render(void){
@@ -69,20 +85,39 @@ void render(void){
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     if(gameState != MENU){
+        sprintf(playersScore, "%d-%d", p1Score, p2Score);
         SDL_RenderFillRect(renderer, &ball);
         SDL_RenderFillRect(renderer, &player.rect);
         SDL_RenderFillRect(renderer, &player2.rect);
+        textSurface = TTF_RenderText_Solid(font, playersScore, textColor);
+        textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+        SDL_Rect currentTextPos = {(WIDTH/2)-75, 100, 150, 75};
+        SDL_RenderCopy(renderer, textTexture, NULL, &currentTextPos);
     }else{
-        surface = TTF_RenderText_Solid(font, "Ponq-Diff", textColor);
-        textTexture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_Rect currentPos = {100, 100, 150, 100};
-        SDL_RenderCopy(renderer, textTexture, NULL, &currentPos);
-        surface = TTF_RenderText_Solid(font, "Iniciar", textColor);
-        textTexture = SDL_CreateTextureFromSurface(renderer, surface);
-        currentPos.y = HEIGHT/2;
-        SDL_RenderCopy(renderer, textTexture, NULL, &currentPos);
+        SDL_Rect currentTextPos = {100, 100, 150, 100};
+        renderText("Ponq-Diff!", &currentTextPos);
+
+        currentTextPos.w = 200;
+        currentTextPos.y = HEIGHT/2;
+        renderText("Singleplayer", &currentTextPos);
+
+        currentTextPos.y += 80;
+        renderText("Multiplayer", &currentTextPos);
+
+        currentTextPos.x = 25;
+        currentTextPos.y = (HEIGHT/2) + 80 * currentOption;
+        currentTextPos.w = 50;
+        renderText(">", &currentTextPos);
     }
     SDL_RenderPresent(renderer);
+}
+
+void renderText(char *text, SDL_Rect *position){
+    textSurface = TTF_RenderText_Solid(font, text, textColor);
+    textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+    SDL_RenderCopy(renderer, textTexture, NULL, position);
+    SDL_DestroyTexture(textTexture);
+    SDL_FreeSurface(textSurface);
 }
 
 void update(void){
@@ -97,25 +132,33 @@ void update(void){
     if(gameState != PAUSED){
         int spdDelta = 240 * delta_time;
         SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
-        SDL_Rect p2YNextPos = {player2.rect.x, (player2.rect.y+(spdDelta * yBallDir)), 20, 80};
-        SDL_Rect ballNextPos = {ball.x + (spdDelta) * xdir, (ball.y+(spdDelta * yBallDir)), 20, 20};
+        SDL_Rect p2YNextPos = {player2.rect.x, ((player2.rect.y+(spdDelta * player2.yDir))), 20, 80};
+        SDL_Rect ballNextPos = {ball.x + (spdDelta) * xBallDir, (ball.y+(spdDelta * yBallDir * speedModifier)), 20, 20};
+
+
 
         if(isOutOfYBounds(&p1YNextPos))
             player.yDir = 0;
 
         if(isOutOfYBounds(&p2YNextPos))
             player2.yDir = 0;
+        
+        if(gameState & P1)
+            player2.yDir = yBallDir;
 
         if(isOutOfYBounds(&ballNextPos))
             yBallDir *=-1; 
 
-        if(SDL_HasIntersection(&ballNextPos, &p1YNextPos) || SDL_HasIntersection(&ballNextPos, &p2YNextPos))
-            xdir *= -1;
+        if(SDL_HasIntersection(&ballNextPos, &p1YNextPos) || SDL_HasIntersection(&ballNextPos, &p2YNextPos)){
+            xBallDir *= -1;
+            speedModifier += .025f;
+        }
+        
         if(isOutOfXBounds(&ball))
-            setup();
+            victory(&ball);
             
-        ball.x += (spdDelta) * xdir;
-        ball.y += (spdDelta) * yBallDir;
+        ball.x += (spdDelta) * xBallDir * speedModifier;
+        ball.y += (spdDelta) * yBallDir * speedModifier;
         player.rect.y += spdDelta * player.yDir;
         player2.rect.y += spdDelta * player2.yDir;     
     }
@@ -130,22 +173,35 @@ void process_input(void){
         return;
     }
 
-    if(event.key.keysym.sym == SDLK_r)
+    if(event.key.keysym.sym == SDLK_r && gameState != MENU)
         setup();
 
-    if(gameState == PAUSED)
+    switch(gameState){
+    case MENU:
+        menuInput(&event);
+        break;
+    
+    case PAUSED:
         pausedInput(&event);
+        break;
 
-    if(gameState == P1)
+    case P1:
         singleInput(&event);
-    if(gameState == P2)
-        coopInput();
-}
+        break;
 
+    case P2:
+        coopInput();
+        break;
+
+    default:
+        break;
+    }
+}
 
 void destroy_window(void){
     SDL_DestroyTexture(textTexture);
     SDL_FreeSurface(surface);
+    SDL_FreeSurface(textSurface);
     TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -160,21 +216,59 @@ int isOutOfXBounds(SDL_Rect *rect){
 }
 
 int isOutOfYBounds(SDL_Rect *rect){
-    if((rect->y+rect->h) > HEIGHT-1 || rect->y < 0){
+    if((rect->y+rect->h) > HEIGHT-1 || rect->y < 0)
         return TRUE;
-    }
     return FALSE;
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> e8543272ad9922b0d56ebbba415092bc70ca49a1
 int hasColidedWithBar(SDL_Rect *obj, SDL_Rect *bar){
     return YCOLISSION(obj, bar) ? TRUE : FALSE;
 }
 
+void menuInput(SDL_Event *event){
+    if(event->type == SDL_KEYDOWN){
+        switch(event->key.keysym.sym){
+            case SDLK_DOWN:
+                if(currentOption < 1){
+                    currentOption++;
+                }else{
+                    currentOption = 0;
+                }
+            break;
+
+            case SDLK_UP:
+                if(currentOption > 0)
+                    currentOption--;
+                else
+                    currentOption = 1;
+                break;
+
+            case SDLK_SPACE:
+                gameState = PAUSED;
+                switch (currentOption)
+                {
+                case 0:
+                    desiredGameState = P1;
+                    break;
+                
+                case 1:
+                    desiredGameState = P2;
+                    break;
+                }
+                break;
+        }
+    }
+}
+
 void pausedInput(SDL_Event *event){
     if(event->type == SDL_KEYDOWN){
-        yBallDir = -1;
-        xdir = 1;
-        gameState = P2;
+        yBallDir = nextYdir;
+        xBallDir = nextXdir;
+        gameState = desiredGameState;
     }
 }
 
@@ -196,4 +290,16 @@ void coopInput(void){
         player2.yDir = -1;
     if(inputIndex[SDL_SCANCODE_DOWN])
         player2.yDir = 1;
+}
+
+void victory(SDL_Rect *rect){
+    if(rect->x > WIDTH)
+        p1Score++;
+    else
+        p2Score++;
+    initBallAndBars();
+    nextYdir = yBallDir*-1;
+    nextXdir = xBallDir*-1;
+    desiredGameState = gameState;
+    gameState = PAUSED;
 }
