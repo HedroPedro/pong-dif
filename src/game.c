@@ -221,14 +221,6 @@ int isOutOfYBounds(SDL_Rect *rect){
     return FALSE;
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> e8543272ad9922b0d56ebbba415092bc70ca49a1
-int hasColidedWithBar(SDL_Rect *obj, SDL_Rect *bar){
-    return YCOLISSION(obj, bar) ? TRUE : FALSE;
-}
-
 void menuInput(SDL_Event *event){
     if(event->type == SDL_KEYDOWN){
         switch(event->key.keysym.sym){
