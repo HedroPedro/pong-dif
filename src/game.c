@@ -109,8 +109,7 @@ void update(void){
         if(isOutOfYBounds(&ballNextPos))
             yBallDir *=-1; 
 
-        if((ballNextPos.x < player.rect.x+player.rect.w && hasColidedWithBar(&ballNextPos, &player.rect)) 
-        || (ballNextPos.x + player2.rect.w > player2.rect.x && hasColidedWithBar(&ballNextPos, &player2.rect)))
+        if(SDL_HasIntersection(&ballNextPos, &p1YNextPos) || SDL_HasIntersection(&ballNextPos, &p2YNextPos))
             xdir *= -1;
         if(isOutOfXBounds(&ball))
             setup();
@@ -155,9 +154,8 @@ void destroy_window(void){
 }
 
 int isOutOfXBounds(SDL_Rect *rect){
-    if(rect->x > WIDTH || rect->x < 0){
+    if(rect->x > WIDTH || rect->x < 0)
         return TRUE;
-    }
     return FALSE;
 }
 
@@ -168,7 +166,6 @@ int isOutOfYBounds(SDL_Rect *rect){
     return FALSE;
 }
 
-//Checa se o y da bolinha está entre a altura da barra desejada
 int hasColidedWithBar(SDL_Rect *obj, SDL_Rect *bar){
     return YCOLISSION(obj, bar) ? TRUE : FALSE;
 }
@@ -182,12 +179,10 @@ void pausedInput(SDL_Event *event){
 }
 
 void singleInput(SDL_Event *event){
-    if(event->key.keysym.sym == SDLK_w){
+    if(event->key.keysym.sym == SDLK_w)
         player.yDir = -1;               
-        }
-    if(event->key.keysym.sym == SDLK_s){
+    if(event->key.keysym.sym == SDLK_s)
         player.yDir = 1;               
-        }
 }
 
 void coopInput(void){

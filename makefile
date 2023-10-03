@@ -5,4 +5,4 @@ run:
 	./game
 
 clean:
-	rm game
+	rm game.*
