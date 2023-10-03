@@ -85,14 +85,14 @@ void render(void){
         renderText("Ponq-Diff!", &currentTextPos);
 
         currentTextPos.w = 200;
-        currentTextPos.y = HEIGHT/2;
+        currentTextPos.y = HEIGHT>>1;
         renderText("Singleplayer", &currentTextPos);
 
         currentTextPos.y += 80;
         renderText("Multiplayer", &currentTextPos);
 
         currentTextPos.x = 25;
-        currentTextPos.y = (HEIGHT/2) + 80 * currentOption;
+        currentTextPos.y = (HEIGHT>>1) + 80 * currentOption;
         currentTextPos.w = 50;
         renderText(">", &currentTextPos);
     }
@@ -119,8 +119,6 @@ void initBallAndBars(void){
 }
 
 void update(void){
-
-
    int last_frame_time = SDL_GetTicks64();
     int time_to_wait = FRAME_TARGET_TIME - (SDL_GetTicks64() - last_frame_time);
 
@@ -129,7 +127,7 @@ void update(void){
 
     float delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
 
-    if(gameState != PAUSED){
+    if(gameState == P1 || gameState == P2){
         int spdDelta = 240 * delta_time;
         SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
         SDL_Rect p2YNextPos = {player2.rect.x, ((player2.rect.y+(spdDelta * player2.yDir))), 20, 80};
@@ -138,13 +136,11 @@ void update(void){
         if(isOutOfYBounds(&p1YNextPos))
             player.yDir = 0;
 
-        if(gameState & P1 && !isOutOfYBounds(&ballNextPos))
-            player2.yDir = pBall.yDir;
-        else
+        if(isOutOfYBounds(&p2YNextPos))
             player2.yDir = 0;
 
-        if(gameState & P2 && isOutOfYBounds(&p2YNextPos))
-            player2.yDir = 0;
+        if(gameState == P1)
+            player2.yDir = pBall.yDir;
 
         if(isOutOfYBounds(&ballNextPos))
             pBall.yDir *=-1; 
@@ -222,11 +218,10 @@ void menuInput(SDL_Event *event){
     if(event->type == SDL_KEYDOWN){
         switch(event->key.keysym.sym){
             case SDLK_DOWN:
-                if(currentOption < 1){
+                if(currentOption < 1)
                     currentOption++;
-                }else{
+                else
                     currentOption = 0;
-                }
             break;
 
             case SDLK_UP:

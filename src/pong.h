@@ -27,8 +27,7 @@ SDL_Texture *textTexture = NULL;
 
 ball pBall;
 SDL_Color textColor = {0, 0, 0, 0};
-bar player;
-bar player2;
+bar player, player2;
 
 int initialize_window(void);
 
