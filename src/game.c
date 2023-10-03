@@ -5,7 +5,7 @@
 int game_is_running = FALSE;
 short gameState, desiredGameState;
 
-int xBallDir = 0, yBallDir = 0, nextXdir, nextYdir;
+int nextXdir, nextYdir;
 float speedModifier = 1;
 
 int main(int argc, char *argv[]){
@@ -53,23 +53,10 @@ int initialize_window(void){
     return TRUE;
 }
 
-void initialize(){}
-
-void initBallAndBars(void){
-    ball.x = WIDTH/2, ball.y = HEIGHT/2;
-    ball.w = 20, ball.h = 20;
-    player.rect.x = 0, player.rect.y = HEIGHT/2;
-    player.rect.w = 20, player.rect.h = 80;
-    player2.rect.x = WIDTH-20, player2.rect.y = HEIGHT/2;
-    player2.rect.w = 20, player2.rect.h = 80;
-    player.yDir = 0, player2.yDir = 0;
-    speedModifier = 1;
-}
-
 void setup(void){
     gameState = MENU;
     initBallAndBars();
-    xBallDir = 0, yBallDir = 0;
+    pBall.xDir = 0, pBall.yDir = 0;
     p1Score = 0, p2Score = 0;
     if(rand() & 1){
         nextXdir = 1;
@@ -86,7 +73,7 @@ void render(void){
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     if(gameState != MENU){
         sprintf(playersScore, "%d-%d", p1Score, p2Score);
-        SDL_RenderFillRect(renderer, &ball);
+        SDL_RenderFillRect(renderer, &pBall.ball);
         SDL_RenderFillRect(renderer, &player.rect);
         SDL_RenderFillRect(renderer, &player2.rect);
         textSurface = TTF_RenderText_Solid(font, playersScore, textColor);
@@ -119,9 +106,22 @@ void renderText(char *text, SDL_Rect *position){
     SDL_DestroyTexture(textTexture);
     SDL_FreeSurface(textSurface);
 }
+    
+void initBallAndBars(void){
+    pBall.ball.x = WIDTH/2, pBall.ball.y = HEIGHT/2;
+    pBall.ball.w = 20, pBall.ball.h = 20;
+    player.rect.x = 0, player.rect.y = HEIGHT/2;
+    player.rect.w = 20, player.rect.h = 80;
+    player2.rect.x = WIDTH-20, player2.rect.y = HEIGHT/2;
+    player2.rect.w = 20, player2.rect.h = 80;
+    player.yDir = 0, player2.yDir = 0;
+    speedModifier = 1;
+}
 
 void update(void){
-    int last_frame_time = SDL_GetTicks64();
+
+
+   int last_frame_time = SDL_GetTicks64();
     int time_to_wait = FRAME_TARGET_TIME - (SDL_GetTicks64() - last_frame_time);
 
     if(time_to_wait > 0 && time_to_wait <= FRAME_TARGET_TIME)
@@ -133,32 +133,33 @@ void update(void){
         int spdDelta = 240 * delta_time;
         SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
         SDL_Rect p2YNextPos = {player2.rect.x, ((player2.rect.y+(spdDelta * player2.yDir))), 20, 80};
-        SDL_Rect ballNextPos = {ball.x + (spdDelta) * xBallDir, (ball.y+(spdDelta * yBallDir * speedModifier)), 20, 20};
-
-
+        SDL_Rect ballNextPos = {pBall.ball.x + (spdDelta) * pBall.xDir, (pBall.ball.y+(spdDelta * pBall.yDir * speedModifier)), 20, 20};
 
         if(isOutOfYBounds(&p1YNextPos))
             player.yDir = 0;
 
-        if(isOutOfYBounds(&p2YNextPos))
+        if(gameState & P1 && !isOutOfYBounds(&ballNextPos))
+            player2.yDir = pBall.yDir;
+        else
             player2.yDir = 0;
-        
-        if(gameState & P1)
-            player2.yDir = yBallDir;
+
+        if(gameState & P2 && isOutOfYBounds(&p2YNextPos))
+            player2.yDir = 0;
 
         if(isOutOfYBounds(&ballNextPos))
-            yBallDir *=-1; 
+            pBall.yDir *=-1; 
 
-        if(SDL_HasIntersection(&ballNextPos, &p1YNextPos) || SDL_HasIntersection(&ballNextPos, &p2YNextPos)){
-            xBallDir *= -1;
+        if(SDL_HasIntersection(&ballNextPos, &p1YNextPos) || 
+            SDL_HasIntersection(&ballNextPos, &p2YNextPos)){
+            pBall.xDir *= -1;
             speedModifier += .025f;
         }
         
-        if(isOutOfXBounds(&ball))
-            victory(&ball);
+        if(isOutOfXBounds(&pBall.ball))
+            victory(&pBall.ball);
             
-        ball.x += (spdDelta) * xBallDir * speedModifier;
-        ball.y += (spdDelta) * yBallDir * speedModifier;
+        pBall.ball.x += (spdDelta) * pBall.xDir * speedModifier;
+        pBall.ball.y += (spdDelta) * pBall.yDir * speedModifier;
         player.rect.y += spdDelta * player.yDir;
         player2.rect.y += spdDelta * player2.yDir;     
     }
@@ -210,15 +211,11 @@ void destroy_window(void){
 }
 
 int isOutOfXBounds(SDL_Rect *rect){
-    if(rect->x > WIDTH || rect->x < 0)
-        return TRUE;
-    return FALSE;
+    return rect->x > WIDTH || rect->x < 0 ? TRUE : FALSE;
 }
 
 int isOutOfYBounds(SDL_Rect *rect){
-    if((rect->y+rect->h) > HEIGHT-1 || rect->y < 0)
-        return TRUE;
-    return FALSE;
+    return (rect->y+rect->h) > HEIGHT || rect->y < 0 ? TRUE : FALSE;
 }
 
 void menuInput(SDL_Event *event){
@@ -258,8 +255,8 @@ void menuInput(SDL_Event *event){
 
 void pausedInput(SDL_Event *event){
     if(event->type == SDL_KEYDOWN){
-        yBallDir = nextYdir;
-        xBallDir = nextXdir;
+        pBall.yDir = nextYdir;
+        pBall.xDir = nextXdir;
         gameState = desiredGameState;
     }
 }
@@ -290,8 +287,8 @@ void victory(SDL_Rect *rect){
     else
         p2Score++;
     initBallAndBars();
-    nextYdir = yBallDir*-1;
-    nextXdir = xBallDir*-1;
+    nextYdir = pBall.yDir*-1;
+    nextXdir = pBall.xDir*-1;
     desiredGameState = gameState;
     gameState = PAUSED;
 }
