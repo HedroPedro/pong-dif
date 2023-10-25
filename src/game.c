@@ -45,7 +45,7 @@ int initialize_window(void){
         return FALSE;
     }
 
-    font = TTF_OpenFont("src/res/comic.ttf", 36);
+    font = TTF_OpenFont("src/res/arial.ttf", 36);
     if(font == NULL){
         fprintf(stderr, "Erro ao carregar fonte");
         return FALSE;
@@ -78,21 +78,21 @@ void render(void){
         SDL_RenderFillRect(renderer, &player2.rect);
         textSurface = TTF_RenderText_Solid(font, playersScore, textColor);
         textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-        SDL_Rect currentTextPos = {(WIDTH/2)-75, 100, 150, 75};
+        SDL_Rect currentTextPos = {(WIDTH>>1)-75, 100, 150, 75};
         SDL_RenderCopy(renderer, textTexture, NULL, &currentTextPos);
     }else{
-        SDL_Rect currentTextPos = {100, 100, 150, 100};
-        renderText("Ponq-Diff!", &currentTextPos);
+        SDL_Rect currentTextPos = {100, 100, 250, 100};
+        renderText("Pong-Diff!", &currentTextPos);
 
         currentTextPos.w = 200;
         currentTextPos.y = HEIGHT>>1;
         renderText("Singleplayer", &currentTextPos);
 
-        currentTextPos.y += 80;
+        currentTextPos.y += 100;
         renderText("Multiplayer", &currentTextPos);
 
         currentTextPos.x = 25;
-        currentTextPos.y = (HEIGHT>>1) + 80 * currentOption;
+        currentTextPos.y = (HEIGHT>>1) + 100 * currentOption;
         currentTextPos.w = 50;
         renderText(">", &currentTextPos);
     }
