@@ -119,7 +119,7 @@ void initBallAndBars(void){
 }
 
 void update(void){
-   int last_frame_time = SDL_GetTicks64();
+    int last_frame_time = SDL_GetTicks64();
     int time_to_wait = FRAME_TARGET_TIME - (SDL_GetTicks64() - last_frame_time);
 
     if(time_to_wait > 0 && time_to_wait <= FRAME_TARGET_TIME)
@@ -127,7 +127,7 @@ void update(void){
 
     float delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
 
-    if(gameState == P1 || gameState == P2){
+    if(gameState != PAUSED && gameState != MENU){
         int spdDelta = 240 * delta_time;
         SDL_Rect p1YNextPos = {player.rect.x, (player.rect.y+(spdDelta * player.yDir)), 20, 80};        
         SDL_Rect p2YNextPos = {player2.rect.x, ((player2.rect.y+(spdDelta * player2.yDir))), 20, 80};
@@ -136,19 +136,13 @@ void update(void){
         if(isOutOfYBounds(&p1YNextPos))
             player.yDir = 0;
 
-        if(isOutOfYBounds(&p2YNextPos))
-            player2.yDir = 0;
-
-        if(gameState == P1)
-            player2.yDir = pBall.yDir;
-
         if(isOutOfYBounds(&ballNextPos))
             pBall.yDir *=-1; 
 
         if(SDL_HasIntersection(&ballNextPos, &p1YNextPos) || 
             SDL_HasIntersection(&ballNextPos, &p2YNextPos)){
             pBall.xDir *= -1;
-            speedModifier += .025f;
+            speedModifier += 0.025f;
         }
         
         if(isOutOfXBounds(&pBall.ball))
@@ -157,7 +151,19 @@ void update(void){
         pBall.ball.x += (spdDelta) * pBall.xDir * speedModifier;
         pBall.ball.y += (spdDelta) * pBall.yDir * speedModifier;
         player.rect.y += spdDelta * player.yDir;
-        player2.rect.y += spdDelta * player2.yDir;     
+        switch (gameState){
+            case P1:
+                player2.yDir = pBall.yDir;
+                if(!isOutOfYBounds(&p2YNextPos))
+                    player2.rect.y += spdDelta * player2.yDir;
+                break;
+        
+            case P2:
+                if(isOutOfYBounds(&p2YNextPos))
+                    player2.yDir  = 0;
+                player2.rect.y += spdDelta * player2.yDir;
+                break;
+            }
     }
 }
 
