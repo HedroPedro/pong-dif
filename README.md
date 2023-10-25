@@ -1,6 +1,6 @@
 # pong-dif
 
-Um clone barato de pong feito em SDL
+Um clone de pong feito em SDL e linguagem C
 
 ## Requisitos para compilar
 
